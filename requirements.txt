@@ -1,0 +1,8 @@
+pandas
+numpy
+scikit-learn
+mlflow
+uvicorn[standard]
+streamlit
+pytest
+requests
