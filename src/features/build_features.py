@@ -11,10 +11,7 @@ ELO_K = 32.0
 FORM_WINDOW = 10          # matches, for rolling win %
 LONG_LAYOFF_DAYS = 60     # threshold for "returning from injury" flag
  
- 
-# ---------------------------------------------------------------------------
-# Elo
-# ---------------------------------------------------------------------------
+# Elo Rating
  
 def expected_score(rating_a: float, rating_b: float) -> float:
     """Standard Elo expected-score formula: probability A beats B
@@ -31,10 +28,8 @@ def update_elo(rating_winner: float, rating_loser: float, k: float = ELO_K):
     return new_winner, new_loser
  
  
-# ---------------------------------------------------------------------------
 # Per-player running state
-# ---------------------------------------------------------------------------
- 
+
 class PlayerState:
     """Holds everything we need to know about a player's history AS OF
     a given point in time, updated incrementally match by match."""
@@ -86,7 +81,7 @@ class HeadToHead:
     """Tracks win counts between every pair of players seen so far."""
  
     def __init__(self):
-        self._wins = defaultdict(int)  # key: (winner_id, loser_id) -> count
+        self._wins = defaultdict(int)  # (winner_id, loser_id) -> count
  
     def record(self, key_a: str, key_b: str) -> None:
         self._wins[(key_a, key_b)] += 1
@@ -98,10 +93,7 @@ class HeadToHead:
         win_pct = a_wins / total if total > 0 else 0.5
         return {"h2h_matches": total, "h2h_player_a_win_pct": win_pct}
  
- 
-# ---------------------------------------------------------------------------
 # Main feature-building loop
-# ---------------------------------------------------------------------------
  
 def build_features(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
     df = df.sort_values(["tourney_date", "match_num"]).reset_index(drop=True)
@@ -121,12 +113,12 @@ def build_features(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
         winner_state = players[winner_id]
         loser_state = players[loser_id]
  
-        # --- READ features BEFORE this match affects anything ---
+        # Reads the features before this match affects anything 
         winner_snapshot = winner_state.snapshot(surface, match_date)
         loser_snapshot = loser_state.snapshot(surface, match_date)
         h2h_stats = h2h.stats(winner_id, loser_id)  # from winner's perspective
  
-        # --- Coin flip: winner becomes player_a or player_b ---
+        # Winner could become either player_a or player_b 
         winner_is_a = rng.random() < 0.5
  
         if winner_is_a:
@@ -200,7 +192,7 @@ def build_features(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
             "player_a_wins": target,
         })
  
-        # --- UPDATE state AFTER reading, using the real result ---
+        # Updates state after reading, using the real result 
         new_winner_elo, new_loser_elo = update_elo(winner_state.elo, loser_state.elo)
         winner_state.elo = new_winner_elo
         loser_state.elo = new_loser_elo
