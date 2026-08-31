@@ -1,11 +1,3 @@
-"""
-train.py
---------
-Phase 4: trains the from-scratch Perceptron on Phase 2's feature
-output, with a time-based train/test split and full MLflow experiment
-tracking.
-"""
-
 import argparse
 import sys
 from pathlib import Path
@@ -20,6 +12,7 @@ from sklearn.metrics import accuracy_score, log_loss, brier_score_loss
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
+# Make src/ importable whether this is run as a script or a module
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from models.perceptron import Perceptron  # noqa: E402
 
@@ -47,6 +40,9 @@ def add_diff_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["elo_diff"] = df["player_a_elo"] - df["player_b_elo"]
     df["surface_elo_diff"] = df["player_a_surface_elo"] - df["player_b_surface_elo"]
+    # Lower rank number = better, so flip the subtraction so that a
+    # positive value consistently means "player_a is better" across
+    # every diff feature in this dataset.
     df["rank_diff"] = df["player_b_rank"] - df["player_a_rank"]
     df["rank_points_diff"] = df["player_a_rank_points"] - df["player_b_rank_points"]
     df["win_pct_last10_diff"] = df["player_a_win_pct_last10"] - df["player_b_win_pct_last10"]
@@ -88,25 +84,33 @@ def prepare_xy(df: pd.DataFrame):
         NUMERIC_DIFF_FEATURES + NUMERIC_RAW_FEATURES + BOOL_FEATURES + CATEGORICAL_FEATURES
     )
     X = df[feature_cols].copy()
+
+    # Fill any remaining NaNs (e.g. a debut player's age might be
+    # missing in rare data-quality cases) with 0 -- after StandardScaler
+    # this becomes "average", a neutral assumption rather than a
+    # dropped row, consistent with Phase 0's flag-don't-drop philosophy.
     for col in NUMERIC_DIFF_FEATURES + NUMERIC_RAW_FEATURES:
         X[col] = X[col].fillna(0)
     for col in BOOL_FEATURES:
         X[col] = X[col].fillna(False).astype(int)
     for col in CATEGORICAL_FEATURES:
         X[col] = X[col].fillna("Unknown").astype(str)
+
     y = df[TARGET].values
     return X, y
 
 
 def main():
     parser = argparse.ArgumentParser(description="Phase 4: train + track the perceptron")
-    parser.add_argument("--features", required=True)
+    parser.add_argument("--features", required=True, help="Path to Phase 2 features CSV")
     parser.add_argument("--tour", choices=["atp", "wta"], required=True)
-    parser.add_argument("--experiment", required=True)
+    parser.add_argument("--experiment", required=True, help="MLflow experiment name")
     parser.add_argument("--learning-rate", type=float, default=0.1)
     parser.add_argument("--n-epochs", type=int, default=500)
-    parser.add_argument("--test-frac", type=float, default=0.2)
-    parser.add_argument("--model-dir", default="models")
+    parser.add_argument("--test-frac", type=float, default=0.2,
+                         help="Fraction of the most RECENT matches held out as test data")
+    parser.add_argument("--model-dir", default="models",
+                         help="Where to also save a plain joblib copy of the pipeline")
     args = parser.parse_args()
 
     print(f"Loading {args.features} ({args.tour.upper()})...")
@@ -150,6 +154,10 @@ def main():
         mlflow.log_metric("test_log_loss", test_logloss)
         mlflow.log_metric("test_brier_score", test_brier)
 
+        # MLflow's default serialization (skops) refuses to trust custom,
+        # non-scikit-learn estimator classes like our Perceptron unless
+        # explicitly whitelisted. Plain pickle has no such restriction and
+        # is the standard choice for a custom estimator like this one.
         mlflow.sklearn.log_model(pipeline, "model", serialization_format="pickle")
 
         print(f"\nTrain accuracy: {train_acc:.3f}")
@@ -157,6 +165,9 @@ def main():
         print(f"Test log loss:  {test_logloss:.3f}")
         print(f"Test Brier score: {test_brier:.3f}")
 
+        # Also save a plain joblib copy -- simpler for Phase 5's FastAPI
+        # service to load directly without needing an MLflow tracking
+        # server or run-ID lookup.
         model_dir = Path(args.model_dir)
         model_dir.mkdir(parents=True, exist_ok=True)
         model_path = model_dir / f"{args.tour}_pipeline.pkl"
