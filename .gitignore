@@ -8,3 +8,5 @@ models/*.pkl
 mlruns/
 __pycache__/
 *.pyc
+data/ongoing/
+data/ongoing/*.csv
