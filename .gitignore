@@ -3,3 +3,8 @@
 data/raw/
 data/processed/
 data/ongoing/mlflow.db
+mlflow.db
+models/*.pkl
+mlruns/
+__pycache__/
+*.pyc
