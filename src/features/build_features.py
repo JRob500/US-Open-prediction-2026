@@ -92,7 +92,55 @@ class HeadToHead:
         total = a_wins + b_wins
         win_pct = a_wins / total if total > 0 else 0.5
         return {"h2h_matches": total, "h2h_player_a_win_pct": win_pct}
+
+def build_current_player_states(df: pd.DataFrame):
+   
+    df = df.sort_values(["tourney_date", "match_num"]).reset_index(drop=True)
  
+    players: dict[str, PlayerState] = defaultdict(PlayerState)
+    h2h = HeadToHead()
+    static_info: dict[str, dict] = {}
+ 
+    for _, match in df.iterrows():
+        winner_id = match["winner_id"]
+        loser_id = match["loser_id"]
+        surface = match.get("surface", "Unknown")
+        match_date = match["tourney_date"]
+ 
+        winner_state = players[winner_id]
+        loser_state = players[loser_id]
+ 
+        new_winner_elo, new_loser_elo = update_elo(winner_state.elo, loser_state.elo)
+        winner_state.elo = new_winner_elo
+        loser_state.elo = new_loser_elo
+ 
+        new_winner_surf_elo, new_loser_surf_elo = update_elo(
+            winner_state.surface_elo[surface], loser_state.surface_elo[surface]
+        )
+        winner_state.surface_elo[surface] = new_winner_surf_elo
+        loser_state.surface_elo[surface] = new_loser_surf_elo
+ 
+        winner_state.apply_result(won=True, surface=surface, match_date=match_date)
+        loser_state.apply_result(won=False, surface=surface, match_date=match_date)
+        h2h.record(winner_id, loser_id)
+ 
+        # Always overwrite with the latest -- since rows are processed in
+        # chronological order, whatever is written last IS the most recent.
+        static_info[winner_id] = {
+            "name": match["winner_name"], "rank": match["winner_rank"],
+            "rank_points": match["winner_rank_points"], "age": match["winner_age"],
+            "ht": match["winner_ht"], "hand": match["winner_hand"],
+            "unranked": match["winner_unranked"],
+        }
+        static_info[loser_id] = {
+            "name": match["loser_name"], "rank": match["loser_rank"],
+            "rank_points": match["loser_rank_points"], "age": match["loser_age"],
+            "ht": match["loser_ht"], "hand": match["loser_hand"],
+            "unranked": match["loser_unranked"],
+        }
+ 
+    return players, h2h, static_info
+
 # Main feature-building loop
  
 def build_features(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
