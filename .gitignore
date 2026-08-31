@@ -2,4 +2,4 @@
 .DS_Store
 data/raw/
 data/processed/
-data/ongoing/
+data/ongoing/mlflow.db
