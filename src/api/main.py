@@ -17,8 +17,6 @@ DEFAULT_SURFACE = "Hard"          # US Open is a hard-court event
 DEFAULT_TOURNEY_LEVEL = "G"       # Grand Slam
 BEST_OF_BY_TOUR = {"atp": 5, "wta": 3}
  
-app = FastAPI(title="US Open Match Predictor")
- 
 # Populated at startup -- see _load_tour() below
 STATE: dict[str, dict] = {}
  
@@ -121,7 +119,14 @@ def _build_feature_row(tour: str, a_id: str, b_id: str, round_: str) -> pd.DataF
         "tourney_level": DEFAULT_TOURNEY_LEVEL,
         "round": round_,
     }
-    return pd.DataFrame([row]), a_snap, b_snap
+
+    # Safety net for players that have msising age/height.rank in the real data which would prevent the model from crashing 
+    df_row = pd.DataFrame([row])
+    numeric_cols = [c for c in df_row.columns if c not in ("surface", "tourney_level", "round")]
+    for col in numeric_cols:
+        df_row[col] = pd.to_numeric(df_row[col], errors="coerce").fillna(0)
+ 
+    return df_row, a_snap, b_snap
  
  
 @app.get("/players", response_model=PlayersResponse)
