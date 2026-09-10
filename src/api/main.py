@@ -15,7 +15,7 @@ MODEL_DIR = Path(__file__).resolve().parents[2] / "models"
  
 DEFAULT_SURFACE = "Hard"          # US Open is a hard-court event
 DEFAULT_TOURNEY_LEVEL = "G"       # Grand Slam
-BEST_OF_BY_TOUR = {"atp": 5, "wta": 3}
+BEST_OF_BY_TOUR = {"atp": 5, "wta": 3} # atp is best out of 5 and wta is best out of 3 
  
 # Populated at startup -- see _load_tour() below
 STATE: dict[str, dict] = {}
