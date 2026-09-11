@@ -2,8 +2,6 @@ import argparse
 import random
 from collections import defaultdict, deque
 from pathlib import Path
- 
-import numpy as np
 import pandas as pd
  
 DEFAULT_ELO = 1500.0
