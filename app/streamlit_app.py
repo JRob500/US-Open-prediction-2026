@@ -43,7 +43,7 @@ def cached_players(api_url: str, tour: str) -> list[str]:
 try:
     players = cached_players(api_url, tour)
 except ApiError as e:
-    st.error(f"⚠️ {e}")
+    st.error(f" error 404 {e}")
     st.stop()
  
 if not players:
@@ -53,7 +53,7 @@ if not players:
  
 # Tabs
  
-tab_single, tab_bracket = st.tabs(["🎯 Single Match Predictor", "🏆 Bracket Simulator"])
+tab_single, tab_bracket = st.tabs([" Single Match Predictor", "Bracket Simulator"])
  
 with tab_single:
     st.header("Predict a single match")
