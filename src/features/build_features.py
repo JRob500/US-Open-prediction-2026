@@ -39,6 +39,7 @@ class PlayerState:
         self.recent_surface_results = defaultdict(lambda: deque(maxlen=FORM_WINDOW))
         self.matches_played = 0
         self.last_match_date = None
+        self.momentum = 0.0 
  
     def win_pct(self, results: deque) -> float:
         if len(results) == 0:
@@ -63,6 +64,7 @@ class PlayerState:
             "surface_elo": self.surface_elo[surface],
             "win_pct_last10": self.rolling_win_pct(),
             "surface_win_pct_last10": self.rolling_surface_win_pct(surface),
+            "momentum": self.momentum,
             "matches_played": self.matches_played,
             "days_since_last_match": self.days_since_last_match(current_date),
             "returning_from_layoff": self.days_since_last_match(current_date) > LONG_LAYOFF_DAYS and self.matches_played > 0,
@@ -71,6 +73,9 @@ class PlayerState:
     def apply_result(self, won: bool, surface: str, match_date) -> None:
         self.recent_results.append(1 if won else 0)
         self.recent_surface_results[surface].append(1 if won else 0)
+        result = 1.0 if won else 0.0
+        alpha = 0.3
+        self.momentum = alpha * result + (1 - alpha) * self.momentum
         self.matches_played += 1
         self.last_match_date = match_date
  
@@ -89,7 +94,14 @@ class HeadToHead:
         b_wins = self._wins[(player_b_id, player_a_id)]
         total = a_wins + b_wins
         win_pct = a_wins / total if total > 0 else 0.5
-        return {"h2h_matches": total, "h2h_player_a_win_pct": win_pct}
+        confidence = min(total / 5, 1.0)
+        h2h_confidence_weighted = 0.5 + (win_pct - 0.5) * confidence
+
+        return {
+            "h2h_matches": total,
+            "h2h_player_a_win_pct": win_pct,
+            "h2h_confidence_weighted": h2h_confidence_weighted,  # NEW
+        }
 
 def build_current_player_states(df: pd.DataFrame):
    
