@@ -12,7 +12,8 @@ Challenger Tour data was intentionally excluded as it wasn't necessary for predi
 ### Prerequisites
 - Python 3.12.8 (or higher)
 - git
-- pip
+- pip/pip3
+- venv 
 
 ### Clone this repository 
 ``` bash
@@ -25,13 +26,13 @@ git clone https://github.com/JRob500/US-Open-prediction-2026.git
 **macOS/Linux:**
 ```bash
 python3 -m venv .venv
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 **Windows**
 ```bash
 python -m venv .venv
-source venv/bin/activate 
+source .venv/bin/activate 
 ```
 
 ### Install dependencies 
